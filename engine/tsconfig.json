@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "moduleResolution": "node",
+    "pretty": true,
+    "target": "ES6",
+    "lib": ["ES2017","DOM"],
+    "resolveJsonModule": true,
+    "typeRoots" : ["./node_modules/@types"],
+    "experimentalDecorators": true,
+    "esModuleInterop": true,
+    "outDir": "build"
+  },
+  "include": [
+    "**/*.*"
+  ]
+}
