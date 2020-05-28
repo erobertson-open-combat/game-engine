@@ -1,0 +1,24 @@
+{
+  "name": "game-engine",
+  "version": "1.0.0",
+  "description": "Open-Combat game engine",
+  "main": "start.js",
+  "scripts": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/erobertson-open-combat/game-engine.git"
+  },
+  "author": "eric robertson",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/erobertson-open-combat/game-engine/issues"
+  },
+  "homepage": "https://github.com/erobertson-open-combat/game-engine#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0",
+    "typescript": "^3.9.3"
+  },
+  "type": "module"
+}

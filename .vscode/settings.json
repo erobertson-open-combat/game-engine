@@ -1,0 +1,37 @@
+{
+    "better-comments.tags": [
+
+
+
+        {
+            "tag": "info",
+            "color": "#991cff",
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "+",
+            "color": "#57db48",
+            "strikethrough": false,
+            "backgroundColor": "rgba(255,255,255,0.2)"
+        },
+        {
+            "tag": "?",
+            "color": "#34bfdb",
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "todo",
+            "color": "#e69027",
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "important",
+            "color": "#c20c33",
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        },
+    ]
+}

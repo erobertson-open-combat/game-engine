@@ -1,0 +1,35 @@
+<!-- Index.html file -->
+<head>
+
+    <title>Open Combat Engine Client</title>
+    <script src="./libs/socketio.js"></script>
+    <script src="./libs/three.js"></script>
+
+</head>
+
+<div id='chat'> <div>Welcome to Open Combat! </div> </div>
+
+<!-- Imports code from the engine and runs in on the client -->
+
+<script type="module" src='./main.js'></script>
+
+<!-- Basic game style -->
+
+<style> 
+    body{ margin: 0 } 
+    #chat {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 500px;
+        max-height: 300px;
+        padding: 10;
+        color: white;
+        background: rgba(0, 0, 0, 0.164);
+        overflow-y: scroll;
+        transform: scaleX(-1);
+    }
+    #chat>div {
+        transform: scaleX(-1);
+    }
+</style>

@@ -9,9 +9,9 @@
     "typeRoots" : ["./node_modules/@types"],
     "experimentalDecorators": true,
     "esModuleInterop": true,
-    "outDir": "build"
+    "outDir": "engine/build"
   },
   "include": [
-    "**/*.*"
+    "engine/src/**/*.*"
   ]
 }

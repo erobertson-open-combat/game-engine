@@ -1,6 +1,6 @@
-import * as T from '../../types.js'
+import * as T from '../types.js'
 
-export default class Renderer {
+export default class GraphicsManager {
     
     renderer
     scene
@@ -12,7 +12,7 @@ export default class Renderer {
 
         this.renderer = new threeJS.WebGLRenderer();
         this.scene = new threeJS.Scene( );
-        //this.camera = this.create_camera( )
+        this.camera = this.create_camera( )
         
         document.body.appendChild( this.renderer.domElement );
         window.addEventListener( 'resize', resize, false );
@@ -35,7 +35,7 @@ export default class Renderer {
         return light
     }
 
-    create_cube ( data: T.Cube ) : any {
+    create_cube ( data: T.SpacialCube ) : any {
 
         let baseGeometry = new this.threeJS.CubeGeometry( data.w, data.h, data.d )
         let baseMaterial  = new this.threeJS.MeshPhongMaterial (  )
@@ -46,7 +46,7 @@ export default class Renderer {
         return mesh;
     }
 
-    create_camera () : T.CameraObject{
+    create_camera () : T.ThreeCamera{
     
         let camera = new this.threeJS.PerspectiveCamera( 90, window.innerWidth / window.innerHeight, 0.01, 1000 );
         let yawObject = new this.threeJS.Object3D();
@@ -61,13 +61,13 @@ export default class Renderer {
 
     /* Does the render */
 
-    render ( data : T.CameraPositioning ) {
+    render ( data : T.ThreeRenderPerspective ) {
         
         let { yaw, pitch, position } = data;
 
-        this.camera.yaw.rotation.y = yaw
-        this.camera.pitch.rotation.x = pitch
-        this.camera.yaw.position.set( position )
+        this.camera.yawObject.rotation.y = yaw
+        this.camera.pitchObject.rotation.x = pitch
+        this.camera.yawObject.position.set( position )
 
         this.renderer.render( this.scene, this.camera.camera )
     }
