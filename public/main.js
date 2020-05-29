@@ -1,4 +1,4 @@
-import { Logger, Client } from '/engine/index.js'
+import { Log, Client } from '/engine/index.js'
 
 // Both of these variables are defined glovally by the two inports from './libs/*' above
 // Renaming them for clarity
@@ -13,7 +13,7 @@ let networkingTarget = {
 }
 
 let ingameConsole = document.getElementById('chat')
-Logger.addLogTarget ( 'client', log => {
+Log.setClientInGame ( log => {
     ingameConsole.innerHTML += `<div>${log}</div>`
 })
 

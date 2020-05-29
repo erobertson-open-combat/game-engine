@@ -4,14 +4,16 @@
     Client will relay user input to the server
     Client will render to a threeJS canvas
 
-
 */
 
-import * as T from '../types.js'
-import Logger from '../Logging.js'
+import * as T from '../Types.js'
+import * as Log from '../Log.js'
+
 import GraphicsManager from "./GraphicsManager.js"
 import InputManager from "./InputManager.js"
-import Engine from '../Engine/Engine.js'
+import * as Engine from '../Engine/Engine.js'
+import * as PlayerManager from '../Engine/PlayerManager.js'
+import Player from '../Engine/Player/Player.js'
 
 export default class Client {
 
@@ -19,17 +21,16 @@ export default class Client {
     graphicsManager : GraphicsManager
 
     log : T.LoggerObject
+    localPlayer : Player
 
-    engine : Engine
-    server
-    localPlayer : T.id
+    server : any 
 
     constructor ( threeJS : any, networkingTarget : T.NetworkConnectionTarget ) {
 
         this.inputManager = new InputManager()
         this.graphicsManager = new GraphicsManager( threeJS )
 
-        this.log = Logger.generateLogger('Client')
+        this.log = Log.generateLogger('Client')
 
         this.connectToServer( networkingTarget );
     }
@@ -43,31 +44,31 @@ export default class Client {
         this.log.client('Logging into game-lobby...')
         this.server.emit('login', id )
 
-        this.server.on( 'inital-sync',  (data : T.SyncInitial) => {
+        this.server.on( 'initial-sync',  (data : T.SyncInitial) => {
 
             this.log.client('Recieving inital game sync...')
             this.log.client(`Recieved data about ${data.players.length} total players`)
 
-            // Take the id as the id of this client and its corisponding player
-            this.localPlayer = data.id
-
             // Set up the engine to start on a specific game tick
-            this.engine = new Engine( data.totalGameTicks )
+            Engine.initialize( data.gameLoop.totalGameTicks )
 
             // Sync the players
-            data.players.forEach( this.engine.set_newPlayer )
+            data.players.forEach( PlayerManager.set_newPlayer )
+
+            // Take the id as the id of this client and its corisponding player
+            this.localPlayer = PlayerManager.get_player(data.id)
 
             // Start the game loop making sure to syncronize it with the server
-            this.startGameLoop( data.firstGameTickMs )
+            this.startGameLoop( data.gameLoop )
 
         })
         this.server.on('update-sync', (data : T.SyncEvent[] ) => {
             data.forEach( d => {
 
                 if ( d.name === 'join-player' )
-                    this.engine.set_newPlayer( d.data )
+                    PlayerManager.set_newPlayer( d.data )
                 if ( d.name === 'leave-player')
-                    this.engine.set_playerDisconnected( d.data )
+                    PlayerManager.set_playerDisconnected( d.data )
 
             })
         })
@@ -75,17 +76,18 @@ export default class Client {
 
     // + Game loop
 
-    startGameLoop ( firstGameTickMs : number) {
+    startGameLoop ( data : T.SyncGameLoop) {
 
-        let last = this.engine.gameTick * 20 + firstGameTickMs
+        let tickSpeed = 20  // Number of ms per tick ( 50 per sec )
+        let last = data.totalGameTicks * tickSpeed + data.firstGameTickMS
 
         setInterval( () => { 
             
             let currentTime = +Date.now()
 
-            if ( currentTime - last > 10 ){
+            if ( currentTime - last > tickSpeed - 10 ){
                 this.gameLoop ()
-                last = this.engine.gameTick * 20 + firstGameTickMs
+                last += tickSpeed
             }
 
         }, 10)
@@ -94,20 +96,20 @@ export default class Client {
 
     gameLoop () {
 
+        // Update local player facing 
+        let facing = this.inputManager.getLocalPlayerFacing()
+        this.localPlayer.set_playerBody({ facing })
+
         // Update local inputs & data, then send data to server for processing
         let keys = this.inputManager.getKeyUpdates()
-        let facing = this.inputManager.getLocalPlayerFacing()
         this.inputManager.registerGameTick()
-        this.engine.set_playerBody( { facing }, this.localPlayer )
         this.server.emit('input-sync', keys )
 
         // Do game tick
-        this.engine.doGameTick()
+        Engine.do_gameTick()
         
         // Do Rendering
-        let renderPerspective = this.engine.get_playerRenderPerspective( this.localPlayer )
-        //TODO link this to graphics
-        //let renderState = this.engine.getRenderState()
+        let renderPerspective = this.localPlayer.get_renderPerspective()
         this.graphicsManager.render( renderPerspective )
     }
 

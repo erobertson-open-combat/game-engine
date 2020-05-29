@@ -1,13 +1,17 @@
-import * as T from '../../types'
+import * as T from '../../Types.js'
+import * as SyncData from '../SyncData.js'
 
 export default class Player {
 
     id : T.id
     body : T.SyncPlayerBody
 
-    constructor ( initalPlayerObjSync : T.SyncInitialPlayer ){
-        this.id = initalPlayerObjSync.id
-        this.body = initalPlayerObjSync.body
+    constructor ( data : T.SyncInitialPlayer ){
+        let { id, body } = data
+        this.id = id
+        this.body = body
+
+        SyncData.sync('join-player', data )
     }
 
     // + Set Data
@@ -39,12 +43,14 @@ export default class Player {
         }
     }
 
-    // Update
+    // + Update
 
     update () {
         
     }
 
-
+    disconnect () {
+        SyncData.sync('leave-player', this.id )
+    }
 
 }

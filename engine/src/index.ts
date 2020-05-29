@@ -1,6 +1,6 @@
-import Engine from './Engine/Engine.js'
+import * as Engine from './Engine/Engine.js'
 import Client from './Client/Client.js'
 import Server from './Server/Server.js'
-import Logger from './Logging.js'
+import * as Log from './Log.js'
 
-export { Engine, Client, Logger, Server }
+export { Engine, Client, Log, Server }

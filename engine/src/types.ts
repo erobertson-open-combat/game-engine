@@ -7,6 +7,7 @@
     If you find yourself creating a type that includes classes as subtypes, make a class 
     Make classes if you really need to contain other class refrences
     Only use base types here
+
 */
 
 // + General
@@ -30,6 +31,11 @@ export interface SpacialPosition {
     x : number
     y : number
     z : number
+}
+export interface SpacialVelocity {
+    dx : number
+    dy : number
+    dz : number
 }
 export interface SpacialCube { 
     x : number
@@ -66,6 +72,9 @@ export interface RenderStatePlayer {
     pos : SpacialPosition
 }
 
+// + Physics
+
+
 // + Client Keyboard Inputs
 
 export interface InputMouseFacing {
@@ -83,14 +92,17 @@ export interface NetworkConnectionTarget {
     id : id
 }
 export interface SyncInitial {
-    firstGameTickMs : number
-    totalGameTicks : number
     id : id 
     players : SyncInitialPlayer[]
+    gameLoop : SyncGameLoop
 }
 export interface SyncEvent {
     name : syncEvent,
     data : any
+}
+export interface SyncGameLoop {
+    firstGameTickMS : number,
+    totalGameTicks : number
 }
 
 // Players 
@@ -103,9 +115,13 @@ export interface SyncPlayerBody {
     facing : InputMouseFacing 
 }
 
-// Inputs 
+// + Inputs 
 
-export interface SyncInput {
+export interface InputState {
+    mouse : InputMouseFacing
+    events : InputKeyState[]
+}
+export interface InputKeyState {
     input : input
     down : boolean 
 }
@@ -115,5 +131,5 @@ export interface SyncInput {
 export interface LoggerObject {
     client : (msg : string) => void
     server : (msg : string) => void
-    both : (msg : string) => void
+    info : (msg : string) => void
 }

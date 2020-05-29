@@ -1,21 +1,27 @@
-import SyncDataManager from "./SyncDataManager";
-import * as T from '../types.js'
+/*
 
-export default class TerrainManager {
 
-    constructor ( public syncData : SyncDataManager ) {}
+*/
 
-    // + Update
+import * as T from '../Types.js'
 
-    update (){
+import * as SyncData from "./SyncData.js";
 
-    }
+// + Initialize'
+export function initialize () {
 
-    // + Render Data
+}
 
-    get_RenderState () : T.RenderStateTerrain {
-        return {}
-    }
+// + Set Data
 
-    
+// + Get Data
+
+export function get_RenderState () : T.RenderStateTerrain {
+    return {}
+}
+
+// + Do Actions
+
+export function update () {
+
 }

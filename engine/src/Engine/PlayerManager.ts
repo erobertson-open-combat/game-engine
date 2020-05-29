@@ -3,76 +3,84 @@
     Will be called with player data when a player joins or leaves
     This data will be part of the dataSync for the next tick
 
+
 */
 
-import * as T from '../types'
+import * as T from '../Types'
+import * as U from '../Utils.js'
+import * as Log from '../Log.js'
 
 import Player from './Player/Player.js';
-import SyncDataManager from './SyncDataManager';
-import Logger from '../Logging.js'
+import * as SyncData from './SyncData.js';
 
+// + Initialize
+
+// Logging
+let log : T.LoggerObject = Log.generateLogger('Player-Manager')
+
+// Player Data
 interface PlayerLookup { [key : number] : Player}
+let playerLookup : PlayerLookup = {}
+let playerList : Player[] = []
 
-export default class PlayerManager {
+export function Initialize () {
 
-    playerLookup : PlayerLookup = {}
-    playerList : Player[] = []
+}
 
-    private log : T.LoggerObject
+// + Set Data
 
-    constructor ( public syncData : SyncDataManager ) {
-        this.log = Logger.generateLogger('Player')
+export function set_newPlayer ( data : T.SyncInitialPlayer ) : Player {
+    let { id } = data 
+
+    if ( playerLookup[id] ) {
+        log.info('New player tried to join with invalid id')
+        return undefined
     }
-
-    // + Set Data
-
-    set_newPlayer ( data : T.SyncInitialPlayer ) {
-        let id = data.id
-        if ( this.playerLookup[id] ) return;
+    else {
+        // The player itself will handle the syncing of its data
         let newPlayer = new Player ( data )
-
-        this.playerLookup[id] = newPlayer;
-        this.playerList.push( newPlayer )
-
-        this.syncData.set_dataSync( 'join-player', newPlayer.get_playerInitalSync() )
-        this.log.both(`New Player with id #${id} joined the game`)
+        // Add the player to the data-structures
+        playerLookup[id] = newPlayer
+        playerList.push( newPlayer )
+        log.server(`Player Joined with ID : ${id}`)
+        log.client(`Player Joined with ID : ${id}`)
+        return newPlayer
     }
-    set_playerDisconnected ( id : T.id ) {
-        let player = this.playerLookup[id]
+}
 
-        delete this.playerLookup[id]
-        this.playerList = this.playerList.filter( p => p.id != id )
-
-        this.syncData.set_dataSync( 'leave-player', player.id )
-        this.log.both(`Player with id #${id} left the game`)
+export function set_playerDisconnected ( id : T.id ) {
+    let player = playerLookup[id]
+    if ( ! player ) {
+        log.info('Tried to disconnect player with invalid id')
     }
-    set_playerBody ( playerPositioning : T.SyncPlayerBody, id : T.id ) {
-        this.playerLookup[id].set_playerBody( playerPositioning )
-    }
-
-    // + Get Data
-
-    get_playerRenderPerspective ( id : T.id ) : T.ThreeRenderPerspective { 
-        return this.playerLookup[id].get_renderPerspective()
-    } 
-    get_playersInitalSync () : T.SyncInitialPlayer[] {
-        return this.playerList.map( p => p.get_playerInitalSync() )
+    else {
+        // The player will handle disconnect data syncing
+        player.disconnect()
+        // Remove the player from the data structures
+        playerList = playerList.filter( p => p.id != id )
+        delete playerLookup[id]
+        log.server(`Player Disconnected with ID : ${id}`)
+        log.client(`Player Disconnected with ID : ${id}`)
     }
 
-    // + Update
+}
 
-    update () {
-        this.playerList.forEach( p => p.update() )
-    }
+// + Get Data
 
-    // + Render
+export function get_player ( id : T.id ) {
+    return playerLookup[id]
+}
 
-    get_renderState () : { [key:number] : T.RenderStatePlayer } {
-        let renderState : { [key:number] : T.RenderStatePlayer } = {}
-        this.playerList.forEach( p => 
-            renderState[p.id] = p.get_renderState()
-        )
-        return renderState;
-    }
+export function get_renderState () : T.RenderStatePlayer[] {
+    return playerList.map( p => p.get_renderState() )
+}
+export function get_initialSync () : T.SyncInitialPlayer[] {
+    return playerList.map( p => p.get_playerInitalSync() )
+}
 
+
+// + Update
+
+export function update () {
+    playerList.forEach( p => p.update() )
 }

@@ -1,4 +1,4 @@
-import * as T from '../types.js'
+import * as T from '../Types.js'
 
 export default class GraphicsManager {
     

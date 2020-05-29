@@ -2,7 +2,7 @@
     INFO: Tracks local clients key and mouse movements to send to the server
 */
 
-import * as T from '../types.js'
+import * as T from '../Types.js'
 
 interface InputLookup { [key : string ] : number }
 
@@ -10,8 +10,13 @@ export default class Input {
 
     // Represents each key you are tracking and how many ticks it has been held down
     keyLog : InputLookup = {}
-    eventSyncLog : T.SyncInput[] = []
+    eventSyncLog : T.InputKeyState[] = []
     clientFacing : T.InputMouseFacing
+
+    // Accepted Key Mappings
+    keyMapping = {
+        a : 'left', w : 'up', s : 'down', d : 'right'
+    }
 
     constructor ( ) {
 
@@ -31,12 +36,18 @@ export default class Input {
     // Events
 
     keyDown ( e : KeyboardEvent ) {
-        this.keyLog[e.key] = 0
-        this.eventSyncLog.push({ input: e.key, down : true })
+        let event = this.keyMapping[e.key]
+        if ( ! event ) return
+        if ( this.keyLog[event] ) return
+        this.keyLog[event] = 0
+        this.eventSyncLog.push({ input: event, down : true })
     }
     keyUp ( e : KeyboardEvent ) {
-        delete this.keyLog[e.key]
-        this.eventSyncLog.push({ input: e.key, down : false })
+        let event = this.keyMapping[e.key]
+        if ( ! event ) return
+        if ( ! this.keyLog[event] ) return
+        delete this.keyLog[event]
+        this.eventSyncLog.push({ input: event, down : false })
     }
     mouseDown ( e : MouseEvent ){
         let name = e.button == 0 ? 'leftClick' : 'rightClick'
@@ -62,10 +73,13 @@ export default class Input {
         
     }
 
-    getKeyUpdates () : T.SyncInput[] {
+    getKeyUpdates () : T.InputState {
         let keyStates = this.eventSyncLog;
         this.eventSyncLog = []
-        return keyStates;
+        return {
+            mouse : this.clientFacing,
+            events : keyStates
+        };
     }
 
     getLocalPlayerFacing () : T.InputMouseFacing {
