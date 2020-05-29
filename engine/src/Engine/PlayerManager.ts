@@ -46,6 +46,9 @@ export default class PlayerManager {
         this.syncData.set_dataSync( 'leave-player', player.id )
         this.log.both(`Player with id #${id} left the game`)
     }
+    set_playerBody ( playerPositioning : T.SyncPlayerBody, id : T.id ) {
+        this.playerLookup[id].set_playerBody( playerPositioning )
+    }
 
     // + Get Data
 
@@ -60,6 +63,16 @@ export default class PlayerManager {
 
     update () {
         this.playerList.forEach( p => p.update() )
+    }
+
+    // + Render
+
+    get_renderState () : { [key:number] : T.RenderStatePlayer } {
+        let renderState : { [key:number] : T.RenderStatePlayer } = {}
+        this.playerList.forEach( p => 
+            renderState[p.id] = p.get_renderState()
+        )
+        return renderState;
     }
 
 }

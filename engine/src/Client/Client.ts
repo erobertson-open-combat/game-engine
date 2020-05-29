@@ -77,13 +77,16 @@ export default class Client {
 
     startGameLoop ( firstGameTickMs : number) {
 
+        let last = this.engine.gameTick * 20 + firstGameTickMs
+
         setInterval( () => { 
             
             let currentTime = +Date.now()
-            let last = this.engine.gameTick * 50 + firstGameTickMs
 
-            if ( currentTime - last > 45 )
+            if ( currentTime - last > 10 ){
                 this.gameLoop ()
+                last = this.engine.gameTick * 20 + firstGameTickMs
+            }
 
         }, 10)
         
@@ -91,13 +94,20 @@ export default class Client {
 
     gameLoop () {
 
+        // Update local inputs & data, then send data to server for processing
         let keys = this.inputManager.getKeyUpdates()
+        let facing = this.inputManager.getLocalPlayerFacing()
         this.inputManager.registerGameTick()
-
+        this.engine.set_playerBody( { facing }, this.localPlayer )
         this.server.emit('input-sync', keys )
+
+        // Do game tick
         this.engine.doGameTick()
         
+        // Do Rendering
         let renderPerspective = this.engine.get_playerRenderPerspective( this.localPlayer )
+        //TODO link this to graphics
+        //let renderState = this.engine.getRenderState()
         this.graphicsManager.render( renderPerspective )
     }
 

@@ -18,9 +18,16 @@ export default class GraphicsManager {
         window.addEventListener( 'resize', resize, false );
 
         // TODO load light sources from the server terrain information
-        //this.renderer.setClearColor( 0xffffff, 1 );
+        this.renderer.setClearColor( 0xCCCCCC, 1 );
         this.create_light( 1, 1, 1 );
         this.create_light( -1, - 0.5, -1 );
+
+        for ( let i = 0; i < 100 ; i ++ ){
+            let x = -5 + Math.random() * 10
+            let y = -5 + Math.random() * 10
+            let z = -5 + Math.random() * 10
+            this.create_cube({ x,y,z, w:1, h:1, d:1} )
+        }
 
         resize ();
 
@@ -40,7 +47,7 @@ export default class GraphicsManager {
         let baseGeometry = new this.threeJS.CubeGeometry( data.w, data.h, data.d )
         let baseMaterial  = new this.threeJS.MeshPhongMaterial (  )
         let mesh = new this.threeJS.Mesh( baseGeometry, baseMaterial )
-
+        mesh.position.set( data.x, data.y, data.z )
         this.scene.add( mesh )
 
         return mesh;
@@ -67,7 +74,7 @@ export default class GraphicsManager {
 
         this.camera.yawObject.rotation.y = yaw
         this.camera.pitchObject.rotation.x = pitch
-        this.camera.yawObject.position.set( position )
+        this.camera.yawObject.position.set( position.x, position.y, position.z )
 
         this.renderer.render( this.scene, this.camera.camera )
     }

@@ -3,6 +3,7 @@
 */
 
 import * as T from '../types.js'
+
 interface InputLookup { [key : string ] : number }
 
 export default class Input {
@@ -10,13 +11,18 @@ export default class Input {
     // Represents each key you are tracking and how many ticks it has been held down
     keyLog : InputLookup = {}
     eventSyncLog : T.SyncInput[] = []
+    clientFacing : T.InputMouseFacing
 
     constructor ( ) {
+
+        this.clientFacing  = { dx : 0, dy : 0}
 
         document.addEventListener("keydown", this.keyDown.bind(this) )
         document.addEventListener("keyup", this.keyUp.bind(this) )
         document.addEventListener("mousedown", this.mouseDown.bind(this))
         document.addEventListener("mouseup", this.mouseUp.bind(this))
+        document.addEventListener("mousemove", this.mouseMove.bind(this))
+        document.addEventListener( 'click', this.onMouseClick ) ;
 
         document.addEventListener('contextmenu', e =>  e.preventDefault() )
 
@@ -42,6 +48,11 @@ export default class Input {
         delete this.keyLog[name]
         this.eventSyncLog.push({ input: name, down : false })
     }
+    mouseMove ( e : MouseEvent ) {
+        this.clientFacing.dx -= e.movementX * 0.002;
+        this.clientFacing.dy -= e.movementY * 0.002;
+    }
+    onMouseClick = (event) => { document.body.requestPointerLock() }
 
     // Register game tick
 
@@ -55,6 +66,10 @@ export default class Input {
         let keyStates = this.eventSyncLog;
         this.eventSyncLog = []
         return keyStates;
+    }
+
+    getLocalPlayerFacing () : T.InputMouseFacing {
+        return this.clientFacing
     }
 
     // Get key states

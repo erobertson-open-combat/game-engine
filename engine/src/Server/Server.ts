@@ -55,7 +55,10 @@ export default class Server {
             let newClient = new ConnectedClient( client )
             this.connectedClients.push( newClient )
             // TODO give the player a more dynamic spawn position & information
-            this.engine.set_newPlayer({ id : newClient.id })
+            this.engine.set_newPlayer({
+                id : newClient.id, 
+                body : { facing : { dx : 0, dy : 0 }} 
+            })
 
             // Sync with client
 
@@ -83,14 +86,16 @@ export default class Server {
     startGameLoop () {
         
         this.firstGameTickMs = +Date.now()
+        let last = +Date.now()
     
         setInterval( () => { 
-                    
+            
             let currentTime = +Date.now()
-            let last = this.engine.gameTick * 50 + this.firstGameTickMs
 
-            if ( currentTime - last > 45 )
+            if ( currentTime - last > 10 ){
                 this.gameLoop ()
+                last = this.engine.gameTick * 20 + this.firstGameTickMs
+            }
 
         }, 10)
     }

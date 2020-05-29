@@ -5,6 +5,8 @@
     IMPORTANT: Logging is done through the Logger
     Make sure that the data is logged to the right output location
 
+    TODO: Add a callback for graphics creation when a new object is added to the game
+
 */
 
 import PlayerManager from "./PlayerManager.js";
@@ -40,6 +42,9 @@ export default class Engine {
     set_newPlayer = ( initalPlayerObjSync : T.SyncInitialPlayer) => {
         this.playerManager.set_newPlayer( initalPlayerObjSync )
     }
+    set_playerBody = ( playerPositioning : T.SyncPlayerBody, id : T.id ) => {
+        this.playerManager.set_playerBody( playerPositioning, id )
+    }
     set_playerDisconnected = ( id : T.id ) => {
         this.playerManager.set_playerDisconnected( id )
     }
@@ -67,6 +72,13 @@ export default class Engine {
 
         this.playerManager.update()
         this.terrainManager.update()
+    }
+
+    getRenderState () : T.RenderState {
+        return {
+            terrain : this.terrainManager.get_RenderState(),
+            players : this.playerManager.get_renderState()
+        }
     }
 
 }

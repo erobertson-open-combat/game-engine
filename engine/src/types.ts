@@ -55,29 +55,56 @@ export interface ThreeCamera {
     pitchObject : any 
 }
 
+export interface RenderState {
+    terrain : RenderStateTerrain
+    players : { [key : number] : RenderStatePlayer }
+}
+export interface RenderStateTerrain {
+    [key : number] : SpacialCube
+}
+export interface RenderStatePlayer {
+    pos : SpacialPosition
+}
+
+// + Client Keyboard Inputs
+
+export interface InputMouseFacing {
+    dx : number
+    dy : number
+}
 
 // + Client & Server Communication
+
+// General Connection 
 
 export interface NetworkConnectionTarget {
     socketIO : any,
     ip : ip,
     id : id
 }
-
 export interface SyncInitial {
     firstGameTickMs : number
     totalGameTicks : number
     id : id 
     players : SyncInitialPlayer[]
 }
-export interface SyncInitialPlayer {
-    id : id
-}
-
 export interface SyncEvent {
     name : syncEvent,
     data : any
 }
+
+// Players 
+
+export interface SyncInitialPlayer {
+    id : id
+    body : SyncPlayerBody
+}
+export interface SyncPlayerBody {
+    facing : InputMouseFacing 
+}
+
+// Inputs 
+
 export interface SyncInput {
     input : input
     down : boolean 
