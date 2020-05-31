@@ -1,93 +1,88 @@
-/* 
-    INFO: This class is the server-side code for the engine 
-    It implements an instnace of `engine` and handles the socket connections
-    It routes data to the engine and to other clients to everyone is in sync
-
-*/
-
-import * as T from '../Types.js'
-import * as U from '../Utils.js'
-import { Log } from '../Index.js'
-
-import * as Engine from '../Engine/Engine.js'
-import InputRecorder from './InputRecorder.js'
-import ConnectedClient from './ConnectedClient.js'
+import * as T from '../types/types.js'
+import * as Engine from '../engine/engine.js'
+import ConnectedClient from './connectedClient.js'
+import * as SyncData from '../engine/SyncData.js'
 
 export default class Server {
 
-    // Game information
-    private gameKey : T.id
+    // Client communication
+    private gamekey : T.Root.id
+    private connectedClients : ConnectedClient[]
+
+    // Game loop processing
     private firstGameTickMs : number
-    private log : T.LoggerObject
+    private currentGameTick : number
 
-    // Clients
-    private connectedClients : ConnectedClient[] = []
- 
-    // + Initialization
+    constructor ( data : T.Server.ServerInitializationData ) {
+        let { gamekey } = data
 
-    constructor ( gameKey : T.id ) {
-        this.gameKey = gameKey;
+        this.gamekey = gamekey
+        this.connectedClients = []
 
-        this.log = Log.generateLogger('Server')
-        this.log.server( 'Server Starting')
-
-        Engine.initialize( 0 )
         this.startGameLoop()
     }
 
-    // + Client connections
+    clientConnects = ( clientSocket : any ) => {
 
-    clientConnects = ( client : any ) => {
-        client.on('login', ( login : T.id) => {
-            if ( login != this.gameKey) { 
-                this.log.server(`New client login failed with '${login}'`)
-                client.disconnect(); 
-            } 
-            else {
-                // The connected client class will handle syncing of data to the client
-                // As well as disconnection and other information
-                this.log.server(`New client logged in`)
-                this.connectedClients.push( new ConnectedClient( client, {
-                    firstGameTickMS : this.firstGameTickMs,
-                    totalGameTicks : Engine.get_gameTick()
-                }) )
+        clientSocket.on( T.Networking.ioevent_ClientLogin, ( data : T.Networking.ClientLoginData ) => {
+            let { gamekey } = data;
+
+            if ( this.gamekey != gamekey ) {
+                console.log(`Client tried joining with invalid gamekey ${gamekey}`)
+                clientSocket.emit( T.Networking.ioevent_LoginFailed, null as T.Networking.LoginFailedData)
+                clientSocket.disconnect()
             }
-        })
-    }
 
+            else {
+                console.log(`Client logged in successfully`)
+                clientSocket.emit( T.Networking.ioevent_GameLoopSync, ({
+                    currentTick : this.currentGameTick,
+                    firstTick : this.firstGameTickMs
+                } as T.Networking.GameLoopSyncData ))
+                this.connectedClients.push( new ConnectedClient ( clientSocket ))
+            }
+
+        })
+
+    }
 
     // + Game Loop
 
     startGameLoop () {
-        
-        let last = +Date.now()
-        let tickSpeed = 20  // Number of ms per tick ( 50 per sec )
-        this.firstGameTickMs = last
-    
+
+        let ticksPerSec = 40
+        let tickSyncRate = 2
+
+        let tickSpeed = 1000 / ticksPerSec 
+        let lastUpdate = +Date.now()
+        this.firstGameTickMs = lastUpdate
+        this.currentGameTick = 0
+
+        Engine.initialize() 
+
         setInterval( () => { 
             
             let currentTime = +Date.now()
 
-            if ( currentTime - last > tickSpeed - 10 ){
-                this.gameLoop ()
-                last += tickSpeed
+            if ( currentTime - lastUpdate > tickSpeed - 10 ){
+                Engine.do_gameTick()
+                lastUpdate += tickSpeed
+                this.currentGameTick += 1
+                if ( this.currentGameTick % tickSyncRate )
+                    this.syncClients()
             }
 
-        }, 10)
-    }
-
-    gameLoop () {
-
-        // Do Engine Updates
-        Engine.do_gameTick()
-        
-        // Sync Data back to clients
-        let syncData = Engine.get_sycnData()
-        this.connectedClients.forEach( c => {
-            c.client.emit( 'update-sync', syncData )
-            c.registerGameTick () 
-        })
+        }, 8)
 
     }
+    // + Sync Data to clients
 
+    syncClients () {
+        let data : T.Networking.ServerSyncData[] = SyncData.exportSyncData()
+        data = data.concat(
+            this.connectedClients.map( c => ({ name : 'sync-player', data : {...c.getPlayerPositioning(), id :c.id }}) )
+        )
+        this.connectedClients.forEach( c => c.syncServerData( data ))
+
+    }
 }

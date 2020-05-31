@@ -1,55 +1,55 @@
-/*
-    INFO: This class handles storage of the data about a single connected client
-    A new instance of this is created for every new connection that is made
-    
-    IMPORTANT: The server handles connection, login, and disconnection
-    The server will verify the gamekey BEFORE creating this instnace
-    The server will kill this instance on disconnect
-*/
-
+import * as T from '../types/types.js'
 import * as U from '../Utils.js'
-import * as T from '../Types.js'
 
-import InputRecorder from './InputRecorder.js'
-import * as PlayerManager from '../Engine/PlayerManager.js'
-import * as Engine from '../Engine/Engine.js'
-import Player from '../Engine/Player/Player.js'
+import PlayerActionStates from './playerActionStates.js'
+import Player from '../engine/Player/player.js'
+import * as PlayerManager from '../engine/playerManager.js'
 
 export default class ConnectedClient {
 
-    id : T.id
-    inputRecord : InputRecorder
-    player : Player
+    public id : T.Root.id
+    private socket : any
+    private playerActionState : PlayerActionStates
+    private player : Player
 
-    constructor ( public client : any, gameLoopSync : T.SyncGameLoop ) {
+    constructor ( socket : any ) {
 
-        this.id = U.nextId()
-        this.inputRecord = new InputRecorder()
-
-        this.player = PlayerManager.set_newPlayer( 
-            { id : this.id, body : { facing : { dx : 0, dy : 0 }} } 
-        )
-
-        client.on('input-sync', this.inputSync )
-        client.on('disconnect', this.disconnect)
-
-        client.emit( 'initial-sync', {
+        this.id = U.randomId()
+        this.socket = socket
+        this.playerActionState = new PlayerActionStates()
+        this.player = PlayerManager.set_newPlayer({ 
             id : this.id,
-            players : PlayerManager.get_initialSync(),
-            gameLoop : gameLoopSync
-
+            position : { 
+                position : { x : 0, y : 0, z : 0 }, 
+                velocity : { dx : 0, dy : 0, dz : 0 } 
+            },
+            body : { facing : { x : 0, y : 0}}
         })
-        
+
+        socket.on(T.Networking.ioevent_ClientSync, this.clientSync )
+        socket.on(T.Networking.ioevent_Disconnect, this.disconnect)
+
+        setTimeout ( () => {
+            socket.emit( T.Networking.ioevent_InitialGameStateSync, ({
+                id : this.id,
+                players : PlayerManager.get_initialSync()
+            } as T.Networking.InitialGameStateData ))
+        }, 100 );
+
     }
 
-    // + Socket Connections
+    // + Socket Communication to server
 
-    inputSync = ( data : T.InputState ) => {
-        data.events.forEach( i => {
-            if ( i.down )
-                this.inputRecord.eventStart(i.input)
-            else
-                this.inputRecord.eventStop(i.input)
+    clientSync = ( data : T.Networking.ClientSyncData ) => {
+        let { body, position } = data
+
+        this.player.set_playerBody( body )
+        this.player.set_physicsObject( position )
+
+        data.actions.forEach( action => {
+            let { type, active } = action
+            if ( action ) this.playerActionState.eventStart( type )
+            else this.playerActionState.eventStop( type )
         })
     }
 
@@ -57,11 +57,22 @@ export default class ConnectedClient {
         PlayerManager.set_playerDisconnected( this.id )
     }
 
-    // + Server Updates
+    // + Get Data
 
-    registerGameTick () {
-        this.inputRecord.registerGameTick()
+    getPlayerPositioning () : T.Physics.DynamicObjectSync {
+        return this.player.physicsObject.get_sync()
     }
 
-    
+    // + Register Game Tick
+
+    registerGameTick () {
+        this.playerActionState.registerGameTick()
+        this.player.update()
+    }
+
+    syncServerData ( data : T.Networking.ServerSyncData[] ) {
+        
+        this.socket.emit( T.Networking.ioevent_ServerSyncEvent, data )
+    }
+
 }

@@ -7,7 +7,9 @@
 
 </head>
 
-<div id='chat'> <div>Welcome to Open Combat! </div> </div>
+
+<div id='debug' class='text'> <div></div> </div>
+<div id='chat' class='text'> <div>Welcome to Open Combat! </div> </div>
 
 <!-- Imports code from the engine and runs in on the client -->
 
@@ -17,17 +19,25 @@
 
 <style> 
     body{ margin: 0 } 
-    #chat {
+    .text {
         position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 500px;
-        max-height: 300px;
+        left: 4px;
+        width: 400px;
         padding: 10;
+        border-radius: 3px;
         color: white;
-        background: rgba(0, 0, 0, 0.164);
+        background: rgba(0, 0, 0, 0.253);
+    }
+    #chat {
+        left : 0px;
+        bottom: 4px;
+        max-height: 300px;
         overflow-y: scroll;
         transform: scaleX(-1);
+        line-height: 25px;
+    }
+    #debug {
+        top: 4px;
     }
     #chat>div {
         transform: scaleX(-1);

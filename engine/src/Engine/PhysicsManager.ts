@@ -1,63 +1,62 @@
-/*
-    INFO: Manages physics throughout the game in the form of axis aligned bounding boxes
-    Ids are assigned elsewhere and used internally, do not assign ids in this class
-    This is done so you can sync ids across the network
-
-    TODO: Figure out how to link the objects physics with their render
-
+import * as T from '../Types/types.js'
+import * as SyncData from "./SyncData.js";
 
 import { SortSweepCollider } from "./Physics/sortSweepColider.js";
 import DynamicPhysicsObject from './Physics/DynamicPhysicsObject.js'
-import * as T from '../Types'
-import { Logger } from "../Index.js";
-import SyncDataManager from "./SyncData.js";
 
-interface DynamicObjectLookup { [key : number ] : DynamicPhysicsObject }
+// + Initialize
 
-export default class PhysicsManager {
+// Physics Objects
+interface DynamicObjectLookup { [key : string ] : { item : DynamicPhysicsObject, id : number} }
 
-    private log : T.LoggerObject
-    physics : SortSweepCollider
-    dynamicObjectLookup : DynamicObjectLookup = {}
+let nextPhysicsId = 0
+let get_nextId = () => ++ nextPhysicsId;
+let dynamicObjectLookup : DynamicObjectLookup = {}
+let physics = new SortSweepCollider ( 3 )
 
-    constructor ( public syncData : SyncDataManager ) {
-        this.physics = new SortSweepCollider ( 3 )
-        this.log = Logger.generateLogger('Physics')
+export function initialize () {
+
+}
+
+// + New Physics Items
+
+export function new_staticObject ( data : T.Physics.Cube, id : T.Root.id){
+    let physicsId = get_nextId()
+    physics.insertBlock( physicsId,
+        data.x - data.w/2, data.y - data.h/2, data.z - data.d/2 ,
+        data.x + data.w/2, data.y + data.h/2, data.z + data.d/2 
+    )
+}
+
+export function new_dynamicObject ( data : T.Physics.Cube, id : T.Root.id ) {
+    let physicsId = get_nextId()
+    physics.insertBlock( physicsId,
+        data.x - data.w/2, data.y - data.h/2, data.z - data.d/2 ,
+        data.x + data.w/2, data.y + data.h/2, data.z + data.d/2 
+    )
+    let dynamicObject = new DynamicPhysicsObject ( id, data )
+    dynamicObjectLookup[ id ] = { item : dynamicObject, id : physicsId }
+    return dynamicObject
+}
+
+// + Physics updates
+
+export function doMovementOnAxis ( id : T.Root.id, axis : number, amount : number ){
+
+    let [hit, limit] = physics.checkAndDoMovement(dynamicObjectLookup[id].id, axis, amount)
+    return [ hit, limit ]
+
+}
+
+export function doTeleport( id : T.Root.id, position : T.Physics.Position ){
+    let target = dynamicObjectLookup[id].item
+    let deltas = { 
+        x : position.x - target.position.x ,
+        y : position.y - target.position.y ,
+        z : position.z - target.position.z ,
     }
+    doMovementOnAxis( id, 0, deltas.x )
+    doMovementOnAxis( id, 1, deltas.y )
+    doMovementOnAxis( id, 2, deltas.z )
 
-    // + Creation of Physics Objects
-
-
-    // A static physics object is one that is unable to move
-    // Other things can still collide with it, but it will not move itself
-    new_staticObject ( data : T.SpacialCube, id : T.id, renderPosition ?: any ){
-        this.physics.insertBlock( id,
-            data.x - data.w/2, data.y - data.h/2, data.z - data.d/2 ,
-            data.x + data.w/2, data.y + data.h/2, data.z + data.d/2 
-        )
-        this.log.server (`Registered static physics object with id ${id}`)
-    }
-
-    // A dynamic object will get movements
-    new_dynamicObject ( data : T.SpacialCube, id : T.id, renderPosition ?: any ) {
-        this.physics.insertBlock( id,
-            data.x - data.w/2, data.y - data.h/2, data.z - data.d/2 ,
-            data.x + data.w/2, data.y + data.h/2, data.z + data.d/2 
-        )
-
-        let dynamicObject = new DynamicPhysicsObject ( id, data, renderPosition, this )
-        this.dynamicObjectLookup[ id ] = dynamicObject
-        return dynamicObject
-    }
-
-
-    // + Physics updates
-
-    doMovementOnAxis ( id : T.id, axis : number, amount : number ){
-
-        let [hit, limit] = this.physics.checkAndDoMovement(id, axis, amount)
-        return [ hit, limit ]
-
-    }
-
-}*/
+}

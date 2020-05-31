@@ -1,116 +1,142 @@
-/*
-    INFO: Client that runs the client copy of the engine locally
-    This creates an instance of the engine that connects to and syncs with the server engine
-    Client will relay user input to the server
-    Client will render to a threeJS canvas
+import * as T from '../types/types.js'
+import * as Engine from '../engine/engine.js'
+import * as Scene from './Graphics/scene.js'
+import * as Logging from './logging.js'
+import * as InputManager from './InputManager.js'
+import * as PlayerManager from '../engine/playerManager.js'
+import * as PhysicsManager from '../engine/physicsManager.js'
+import * as SyncData from '../engine/SyncData.js'
+import Player from '../engine/Player/player.js'
 
-*/
-
-import * as T from '../Types.js'
-import * as Log from '../Log.js'
-
-import GraphicsManager from "./GraphicsManager.js"
-import InputManager from "./InputManager.js"
-import * as Engine from '../Engine/Engine.js'
-import * as PlayerManager from '../Engine/PlayerManager.js'
-import Player from '../Engine/Player/Player.js'
+let walkSpeed = 0.1
 
 export default class Client {
 
-    inputManager: InputManager
-    graphicsManager : GraphicsManager
+    private serverSocket : any 
+    private localPlayerId : T.Root.id
+    private localPlayer : Player
 
-    log : T.LoggerObject
-    localPlayer : Player
 
-    server : any 
-
-    constructor ( threeJS : any, networkingTarget : T.NetworkConnectionTarget ) {
-
-        this.inputManager = new InputManager()
-        this.graphicsManager = new GraphicsManager( threeJS )
-
-        this.log = Log.generateLogger('Client')
-
-        this.connectToServer( networkingTarget );
-    }
-
-    // + Server Communication
-
-    connectToServer ( { socketIO, ip, id } : T.NetworkConnectionTarget ) {
-
-        this.server = socketIO ( ip )
+    constructor ( threeJS : any, networkTarget : T.Networking.NetworkConnectionTarget, display : T.Client.IngameDisplay) {
+        let { socketIO, ip, gamekey } = networkTarget
         
-        this.log.client('Logging into game-lobby...')
-        this.server.emit('login', id )
+        Scene.initialize( threeJS )
+        Logging.initialize ( display )
+        InputManager.initialize()
 
-        this.server.on( 'initial-sync',  (data : T.SyncInitial) => {
+        this.serverSocket = socketIO( ip )
+        this.serverSocket.emit ( T.Networking.ioevent_ClientLogin, { gamekey } )
+        this.serverSocket.on( T.Networking.ioevent_GameLoopSync, this.startGameLoop )
+        this.serverSocket.on( T.Networking.ioevent_InitialGameStateSync, this.connectToServer )
+        this.serverSocket.on( T.Networking.ioevent_ServerSyncEvent, this.recieveSyncFromServer )
 
-            this.log.client('Recieving inital game sync...')
-            this.log.client(`Recieved data about ${data.players.length} total players`)
+    }
 
-            // Set up the engine to start on a specific game tick
-            Engine.initialize( data.gameLoop.totalGameTicks )
+    // + Networking
 
-            // Sync the players
-            data.players.forEach( PlayerManager.set_newPlayer )
+    connectToServer = ( gameState : T.Networking.InitialGameStateData ) => {
+        let { id, players} = gameState
 
-            // Take the id as the id of this client and its corisponding player
-            this.localPlayer = PlayerManager.get_player(data.id)
+        console.log('Recieving Game Data')
+        console.log(`Local client id set as ${id}`)
+        console.log(`Loading ${players.length} new players`)
+    
+        players.forEach( PlayerManager.set_newPlayer)
+    
+        this.localPlayerId = id
+        this.localPlayer = PlayerManager.get_player( id )
+        Logging.writeDebug('Player ID', id)
+        
+    }
 
-            // Start the game loop making sure to syncronize it with the server
-            this.startGameLoop( data.gameLoop )
-
-        })
-        this.server.on('update-sync', (data : T.SyncEvent[] ) => {
-            data.forEach( d => {
-
-                if ( d.name === 'join-player' )
-                    PlayerManager.set_newPlayer( d.data )
-                if ( d.name === 'leave-player')
-                    PlayerManager.set_playerDisconnected( d.data )
-
-            })
+    recieveSyncFromServer = ( serverData : T.Networking.ServerSyncData[] ) => {
+        serverData.forEach( ({ name , data }) => {
+            if ( name == 'leave-player') {
+                PlayerManager.set_playerDisconnected( data )
+                Logging.writeClient( `Player id# ${data} left`)
+            }
+            else if ( name == 'join-player'){
+                if ( data.id != this.localPlayerId){
+                    PlayerManager.set_newPlayer( data )
+                    Logging.writeClient( `Welcome player id# ${data.id} to the game`)
+                }
+            }
+            else if ( name == 'sync-player'){
+                let player = PlayerManager.get_player( data.id )
+                if ( player ) player.set_physicsObject( data )
+            }
         })
     }
 
-    // + Game loop
+    // + GameLoop
 
-    startGameLoop ( data : T.SyncGameLoop) {
+    startGameLoop = ( gameLoopData : T.Networking.GameLoopSyncData )=> {
+        let { currentTick, firstTick } = gameLoopData
 
-        let tickSpeed = 20  // Number of ms per tick ( 50 per sec )
-        let last = data.totalGameTicks * tickSpeed + data.firstGameTickMS
+        console.log('Logged into server successfully')
+        console.log('Recieved game loop initialization data')
+
+        let ticksPerSec = 40
+
+        let tickSpeed = 1000 / ticksPerSec 
+        let lastUpdate = firstTick + (currentTick * tickSpeed)
 
         setInterval( () => { 
             
+            if ( ! this.localPlayer ) return;
+            
             let currentTime = +Date.now()
+            if ( currentTime - lastUpdate > tickSpeed - 10 ){
 
-            if ( currentTime - last > tickSpeed - 10 ){
-                this.gameLoop ()
-                last += tickSpeed
+                InputManager.registerGameTick()
+                this.do_movement()
+                Engine.do_gameTick()
+                Scene.render( this.localPlayer.get_renderPerspective() )
+                this.syncToServer()
+                
+                lastUpdate += tickSpeed
+                currentTick += 1
+
+                if ( currentTick % 20 == 0 )
+                    Logging.writeDebug('Tick #', currentTick)
             }
 
-        }, 10)
-        
+        }, 8)
+
     }
 
-    gameLoop () {
+    // + Do Client actions
 
-        // Update local player facing 
-        let facing = this.inputManager.getLocalPlayerFacing()
-        this.localPlayer.set_playerBody({ facing })
+    action_move ( theta : number ) {
+        let { x, z } = { x : -Math.sin( theta ), z : -Math.cos( theta )}
+        this.localPlayer.physicsObject.velocity.dx += x * walkSpeed
+        this.localPlayer.physicsObject.velocity.dz += z * walkSpeed
+    }
 
-        // Update local inputs & data, then send data to server for processing
-        let keys = this.inputManager.getKeyUpdates()
-        this.inputManager.registerGameTick()
-        this.server.emit('input-sync', keys )
+    do_movement () {
+        this.localPlayer.set_facing( InputManager.getLocalPlayerFacing() )
+        if ( InputManager.getKeyState('left') > 0 )
+            this.action_move( this.localPlayer.body.facing.x + Math.PI/2 )
+        if ( InputManager.getKeyState('forward') > 0 )
+            this.action_move( this.localPlayer.body.facing.x )
+        if ( InputManager.getKeyState('right')> 0 )
+            this.action_move( this.localPlayer.body.facing.x - Math.PI/2 )
+        if ( InputManager.getKeyState('back')> 0 )
+            this.action_move( this.localPlayer.body.facing.x + Math.PI )
+    }
 
-        // Do game tick
-        Engine.do_gameTick()
-        
-        // Do Rendering
-        let renderPerspective = this.localPlayer.get_renderPerspective()
-        this.graphicsManager.render( renderPerspective )
+    // + Sync to server
+
+    syncToServer () {
+        let playerData = this.localPlayer.get_playerInitalSync() 
+        let action = InputManager.getKeyUpdates()
+        let data : T.Networking.ClientSyncData = {
+            actions : action,
+            body: playerData.body,
+            position : playerData.position 
+        }
+        this.serverSocket.emit( T.Networking.ioevent_ClientSync, data)
+        SyncData.clearSyncData()
     }
 
 }

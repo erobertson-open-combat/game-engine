@@ -2,27 +2,15 @@ import express from 'express'
 import http from 'http'
 import socketIO from 'socket.io'
 
-import { Log, Server } from './engine/build/index.js'
+import { Server } from './engine/build/index.js'
 
 // Setup Web-Server
 let app = express () 
 let server = http.createServer( app )
 let io = socketIO(server)
 
-// Logging
-Log.setServerConsole( msg => {
-    let hours = (''+(new Date().getHours())).padStart(2,'0')
-    let mins = (''+(new Date().getMinutes())).padStart(2,'0')
-    let secs = (''+(new Date().getSeconds())).padStart(2,'0')
-    let time = `[${hours}:${mins}:${secs}]  `
-    console.log ( time + msg )
-})
-Log.setInfo ( msg => {
-    console.log ('INFO:', msg )
-})
-
 // Setup GameEngine Server
-let openServer = new Server ( 123 )
+let openServer = new Server ( { gamekey : 'debug' } )
 io.on('connection', openServer.clientConnects );
 
 // Setup Client Files

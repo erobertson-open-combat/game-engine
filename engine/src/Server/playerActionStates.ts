@@ -4,7 +4,7 @@
 
 interface InputLookup { [key : string ] : number }
 
-export default class Input {
+export default class PlayerActionStates {
 
     keyLog : InputLookup = {}
 
