@@ -17,7 +17,7 @@
   "homepage": "https://github.com/erobertson-open-combat/game-engine#readme",
   "dependencies": {
     "express": "^4.17.1",
-    "socket.io": "^2.3.0",
+    "socket.io": "^2.4.0",
     "typescript": "^3.9.3"
   },
   "type": "module"
